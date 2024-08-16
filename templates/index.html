@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>同步视频播放器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.1.5/hls.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            max-width: 800px;
+            width: 100%;
+        }
+        #video {
+            width: 100%;
+            display: block;
+        }
+        #userCount {
+            padding: 15px;
+            text-align: center;
+            font-size: 18px;
+            color: #333;
+            background-color: #f8f8f8;
+            border-top: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <video id="video" controls></video>
+        <div id="userCount"></div>
+    </div>
+    <script>
+        const socket = io();
+        const video = document.getElementById('video');
+        const userCount = document.getElementById('userCount');
+        const room = 'video_room'; // 你可以根据需要动态生成房间ID
+        const SYNC_THRESHOLD = 2; // 设置2秒的同步阈值
+
+        // 设置HLS.js来播放m3u8视频
+        const videoSrc = 'https://svip.high21-playback.com/20240721/37526_a7bdcdca/index.m3u8'; // 替换为你的m3u8视频URL
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = videoSrc;
+        }
+
+        socket.on('connect', () => {
+            socket.emit('join', {room: room});
+        });
+
+        socket.on('user_joined', (data) => {
+            userCount.textContent = `在线用户: ${data.count}`;
+        });
+
+        socket.on('user_left', (data) => {
+            userCount.textContent = `在线用户: ${data.count}`;
+        });
+
+        socket.on('sync', (data) => {
+            const timeDiff = Math.abs(video.currentTime - data.time);
+            if (timeDiff > SYNC_THRESHOLD) {
+                video.currentTime = data.time;
+            }
+            if (data.playing && video.paused) {
+                video.play();
+            } else if (!data.playing && !video.paused) {
+                video.pause();
+            }
+        });
+
+        video.addEventListener('play', () => {
+            socket.emit('sync', {room: room, time: video.currentTime, playing: true});
+        });
+
+        video.addEventListener('pause', () => {
+            socket.emit('sync', {room: room, time: video.currentTime, playing: false});
+        });
+
+        video.addEventListener('seeked', () => {
+            socket.emit('sync', {room: room, time: video.currentTime, playing: !video.paused});
+        });
+
+        // 每5秒同步一次进度
+        setInterval(() => {
+            if (!video.paused) {
+                socket.emit('sync', {room: room, time: video.currentTime, playing: true});
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
