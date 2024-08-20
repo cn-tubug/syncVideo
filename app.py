@@ -47,4 +47,4 @@ def on_disconnect():
                 emit('user_left', {'count': len(rooms[room])}, room=room)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0')
+    socketio.run(app, debug=True, host='0.0.0.0', allow_unsafe_werkzeug=True)
