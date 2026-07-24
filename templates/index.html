@@ -7,52 +7,668 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.1.5/hls.min.js"></script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             margin: 0;
             padding: 20px;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
+            color: #fff;
+        }
+        .main-wrapper {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        .video-section {
+            flex: 1;
+            min-width: 0;
         }
         .container {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             overflow: hidden;
-            max-width: 800px;
-            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         #video {
             width: 100%;
             display: block;
+            background: #000;
+        }
+        .info-bar {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
         #userCount {
-            padding: 15px;
-            text-align: center;
+            font-size: 14px;
+            color: #a0a0a0;
+        }
+        #hostBadge {
+            font-size: 12px;
+            padding: 4px 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            color: #fff;
+            font-weight: 500;
+        }
+        #hostBadge.hidden {
+            display: none;
+        }
+        
+        /* 聊天面板样式 */
+        .chat-section {
+            width: 350px;
+            flex-shrink: 0;
+        }
+        .chat-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chat-title::before {
+            content: '💬';
+        }
+        .chat-toggle {
+            background: none;
+            border: none;
+            color: #a0a0a0;
+            cursor: pointer;
             font-size: 18px;
-            color: #333;
-            background-color: #f8f8f8;
-            border-top: 1px solid #e0e0e0;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+        .chat-toggle:hover {
+            color: #fff;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .chat-message {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .chat-message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+        .chat-username {
+            color: #667eea;
+            font-weight: 500;
+        }
+        .chat-time {
+            color: #666;
+        }
+        .chat-bubble {
+            background: rgba(102, 126, 234, 0.2);
+            padding: 10px 14px;
+            border-radius: 12px;
+            border-bottom-left-radius: 4px;
+            max-width: 85%;
+            word-wrap: break-word;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .chat-bubble img {
+            height: 24px;
+            width: auto;
+            vertical-align: middle;
+        }
+        .chat-input-area {
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .chat-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 10px 15px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            resize: none;
+            min-height: 40px;
+            max-height: 100px;
+        }
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+        .chat-tools {
+            display: flex;
+            gap: 8px;
+        }
+        .chat-tool-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #a0a0a0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .chat-tool-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+            color: #fff;
+        }
+        .chat-send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        .chat-send-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        /* 表情面板 */
+        .emoji-panel {
+            position: absolute;
+            bottom: 70px;
+            right: 20px;
+            width: 320px;
+            max-height: 400px;
+            background: rgba(30, 30, 50, 0.98);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            display: none;
+            flex-direction: column;
+            z-index: 100;
+        }
+        .emoji-panel.active {
+            display: flex;
+        }
+        .emoji-header {
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .emoji-tabs {
+            display: flex;
+            gap: 8px;
+        }
+        .emoji-tab {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #888;
+        }
+        .emoji-tab.active {
+            background: rgba(102, 126, 234, 0.3);
+            color: #fff;
+        }
+        .emoji-close {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 300px;
+        }
+        .emoji-item {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 20px;
+        }
+        .emoji-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
+        }
+        .emoji-item img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+        }
+        
+        /* 折叠状态 */
+        .chat-section.collapsed .chat-container {
+            height: auto;
+        }
+        .chat-section.collapsed .chat-messages,
+        .chat-section.collapsed .chat-input-area {
+            display: none;
+        }
+        
+        /* 系统消息 */
+        .system-message {
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+            padding: 8px;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 900px) {
+            .main-wrapper {
+                flex-direction: column;
+            }
+            .chat-section {
+                width: 100%;
+            }
+            .chat-container {
+                height: 400px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <video id="video" controls></video>
-        <div id="userCount"></div>
+    <div class="main-wrapper">
+        <div class="video-section">
+            <div class="container">
+                <video id="video" controls></video>
+                <div class="info-bar">
+                    <div id="userCount">在线用户: 1</div>
+                    <div id="hostBadge" class="hidden">房主</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-section" id="chatSection">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="chat-title">聊天室</div>
+                    <button class="chat-toggle" id="chatToggle">−</button>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="system-message">欢迎来到同步视频聊天室！</div>
+                </div>
+                <div class="chat-input-area">
+                    <div class="chat-input-wrapper">
+                        <div style="position: relative; flex: 1;">
+                            <textarea class="chat-input" id="chatInput" placeholder="说点什么..." rows="1"></textarea>
+                            <div class="emoji-panel" id="emojiPanel">
+                                <div class="emoji-header">
+                                    <div class="emoji-tabs">
+                                        <span class="emoji-tab active">QQ</span>
+                                    </div>
+                                    <button class="emoji-close" id="emojiClose">×</button>
+                                </div>
+                                <div class="emoji-grid" id="emojiGrid"></div>
+                            </div>
+                        </div>
+                        <div class="chat-tools">
+                            <button class="chat-tool-btn" id="emojiBtn" title="表情">😊</button>
+                            <button class="chat-send-btn" id="sendBtn" title="发送">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
     <script>
-        const socket = io();
+        // 配置 Socket.IO 连接
+        const socket = io({
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+        });
+        
         const video = document.getElementById('video');
         const userCount = document.getElementById('userCount');
-        const room = 'video_room'; // 你可以根据需要动态生成房间ID
-        const SYNC_THRESHOLD = 2; // 设置2秒的同步阈值
-
-        // 设置HLS.js来播放m3u8视频
-        // 视频URL从后端通过模板变量传入
+        const hostBadge = document.getElementById('hostBadge');
+        const room = 'video_room';
+        const SYNC_THRESHOLD = 2;
+        
+        let isHost = false;
+        let username = '用户' + Math.floor(Math.random() * 10000);
+        
+        // QQ 表情数据
+        const qqEmojis = [
+            {id: 0, name: '/惊讶', url: 'https://qqovo.top/face/0.gif'},
+            {id: 1, name: '/撇嘴', url: 'https://qqovo.top/face/1.gif'},
+            {id: 2, name: '/色', url: 'https://qqovo.top/face/2.gif'},
+            {id: 3, name: '/发呆', url: 'https://qqovo.top/face/3.gif'},
+            {id: 4, name: '/得意', url: 'https://qqovo.top/face/4.gif'},
+            {id: 5, name: '/流泪', url: 'https://qqovo.top/face/5.gif'},
+            {id: 6, name: '/害羞', url: 'https://qqovo.top/face/6.gif'},
+            {id: 7, name: '/闭嘴', url: 'https://qqovo.top/face/7.gif'},
+            {id: 8, name: '/睡', url: 'https://qqovo.top/face/8.gif'},
+            {id: 9, name: '/大哭', url: 'https://qqovo.top/face/9.gif'},
+            {id: 10, name: '/尴尬', url: 'https://qqovo.top/face/10.gif'},
+            {id: 11, name: '/发怒', url: 'https://qqovo.top/face/11.gif'},
+            {id: 12, name: '/调皮', url: 'https://qqovo.top/face/12.gif'},
+            {id: 13, name: '/呲牙', url: 'https://qqovo.top/face/13.gif'},
+            {id: 14, name: '/微笑', url: 'https://qqovo.top/face/14.gif'},
+            {id: 15, name: '/难过', url: 'https://qqovo.top/face/15.gif'},
+            {id: 16, name: '/酷', url: 'https://qqovo.top/face/16.gif'},
+            {id: 18, name: '/抓狂', url: 'https://qqovo.top/face/18.gif'},
+            {id: 19, name: '/吐', url: 'https://qqovo.top/face/19.gif'},
+            {id: 20, name: '/偷笑', url: 'https://qqovo.top/face/20.gif'},
+            {id: 21, name: '/可爱', url: 'https://qqovo.top/face/21.gif'},
+            {id: 22, name: '/白眼', url: 'https://qqovo.top/face/22.gif'},
+            {id: 23, name: '/傲慢', url: 'https://qqovo.top/face/23.gif'},
+            {id: 24, name: '/饥饿', url: 'https://qqovo.top/face/24.gif'},
+            {id: 25, name: '/困', url: 'https://qqovo.top/face/25.gif'},
+            {id: 26, name: '/惊恐', url: 'https://qqovo.top/face/26.gif'},
+            {id: 27, name: '/流汗', url: 'https://qqovo.top/face/27.gif'},
+            {id: 28, name: '/憨笑', url: 'https://qqovo.top/face/28.gif'},
+            {id: 29, name: '/悠闲', url: 'https://qqovo.top/face/29.gif'},
+            {id: 30, name: '/奋斗', url: 'https://qqovo.top/face/30.gif'},
+            {id: 31, name: '/咒骂', url: 'https://qqovo.top/face/31.gif'},
+            {id: 32, name: '/疑问', url: 'https://qqovo.top/face/32.gif'},
+            {id: 33, name: '/嘘', url: 'https://qqovo.top/face/33.gif'},
+            {id: 34, name: '/晕', url: 'https://qqovo.top/face/34.gif'},
+            {id: 35, name: '/折磨', url: 'https://qqovo.top/face/35.gif'},
+            {id: 36, name: '/衰', url: 'https://qqovo.top/face/36.gif'},
+            {id: 37, name: '/骷髅', url: 'https://qqovo.top/face/37.gif'},
+            {id: 38, name: '/敲打', url: 'https://qqovo.top/face/38.gif'},
+            {id: 39, name: '/再见', url: 'https://qqovo.top/face/39.gif'},
+            {id: 41, name: '/发抖', url: 'https://qqovo.top/face/41.gif'},
+            {id: 42, name: '/爱情', url: 'https://qqovo.top/face/42.gif'},
+            {id: 43, name: '/跳跳', url: 'https://qqovo.top/face/43.gif'},
+            {id: 46, name: '/猪头', url: 'https://qqovo.top/face/46.gif'},
+            {id: 49, name: '/拥抱', url: 'https://qqovo.top/face/49.gif'},
+            {id: 53, name: '/蛋糕', url: 'https://qqovo.top/face/53.gif'},
+            {id: 56, name: '/刀', url: 'https://qqovo.top/face/56.gif'},
+            {id: 59, name: '/便便', url: 'https://qqovo.top/face/59.gif'},
+            {id: 60, name: '/咖啡', url: 'https://qqovo.top/face/60.gif'},
+            {id: 63, name: '/玫瑰', url: 'https://qqovo.top/face/63.gif'},
+            {id: 64, name: '/凋谢', url: 'https://qqovo.top/face/64.gif'},
+            {id: 66, name: '/爱心', url: 'https://qqovo.top/face/66.gif'},
+            {id: 67, name: '/心碎', url: 'https://qqovo.top/face/67.gif'},
+            {id: 74, name: '/太阳', url: 'https://qqovo.top/face/74.gif'},
+            {id: 75, name: '/月亮', url: 'https://qqovo.top/face/75.gif'},
+            {id: 76, name: '/赞', url: 'https://qqovo.top/face/76.gif'},
+            {id: 77, name: '/踩', url: 'https://qqovo.top/face/77.gif'},
+            {id: 78, name: '/握手', url: 'https://qqovo.top/face/78.gif'},
+            {id: 79, name: '/胜利', url: 'https://qqovo.top/face/79.gif'},
+            {id: 85, name: '/飞吻', url: 'https://qqovo.top/face/85.gif'},
+            {id: 86, name: '/怄火', url: 'https://qqovo.top/face/86.gif'},
+            {id: 89, name: '/西瓜', url: 'https://qqovo.top/face/89.gif'},
+            {id: 96, name: '/冷汗', url: 'https://qqovo.top/face/96.gif'},
+            {id: 97, name: '/擦汗', url: 'https://qqovo.top/face/97.gif'},
+            {id: 98, name: '/抠鼻', url: 'https://qqovo.top/face/98.gif'},
+            {id: 99, name: '/鼓掌', url: 'https://qqovo.top/face/99.gif'},
+            {id: 100, name: '/糗大了', url: 'https://qqovo.top/face/100.gif'},
+            {id: 101, name: '/坏笑', url: 'https://qqovo.top/face/101.gif'},
+            {id: 102, name: '/左哼哼', url: 'https://qqovo.top/face/102.gif'},
+            {id: 103, name: '/右哼哼', url: 'https://qqovo.top/face/103.gif'},
+            {id: 104, name: '/哈欠', url: 'https://qqovo.top/face/104.gif'},
+            {id: 105, name: '/鄙视', url: 'https://qqovo.top/face/105.gif'},
+            {id: 106, name: '/委屈', url: 'https://qqovo.top/face/106.gif'},
+            {id: 107, name: '/快哭了', url: 'https://qqovo.top/face/107.gif'},
+            {id: 108, name: '/阴险', url: 'https://qqovo.top/face/108.gif'},
+            {id: 109, name: '/左亲亲', url: 'https://qqovo.top/face/109.gif'},
+            {id: 110, name: '/吓', url: 'https://qqovo.top/face/110.gif'},
+            {id: 111, name: '/可怜', url: 'https://qqovo.top/face/111.gif'},
+            {id: 112, name: '/菜刀', url: 'https://qqovo.top/face/112.gif'},
+            {id: 114, name: '/篮球', url: 'https://qqovo.top/face/114.gif'},
+            {id: 116, name: '/示爱', url: 'https://qqovo.top/face/116.gif'},
+            {id: 118, name: '/抱拳', url: 'https://qqovo.top/face/118.gif'},
+            {id: 119, name: '/勾引', url: 'https://qqovo.top/face/119.gif'},
+            {id: 120, name: '/拳头', url: 'https://qqovo.top/face/120.gif'},
+            {id: 121, name: '/差劲', url: 'https://qqovo.top/face/121.gif'},
+            {id: 123, name: '/NO', url: 'https://qqovo.top/face/123.gif'},
+            {id: 124, name: '/OK', url: 'https://qqovo.top/face/124.gif'},
+            {id: 125, name: '/转圈', url: 'https://qqovo.top/face/125.gif'},
+            {id: 129, name: '/挥手', url: 'https://qqovo.top/face/129.gif'},
+            {id: 137, name: '/鞭炮', url: 'https://qqovo.top/face/137.gif'},
+            {id: 144, name: '/喝彩', url: 'https://qqovo.top/face/144.gif'},
+            {id: 146, name: '/爆筋', url: 'https://qqovo.top/face/146.gif'},
+            {id: 147, name: '/棒棒糖', url: 'https://qqovo.top/face/147.gif'},
+            {id: 169, name: '/手枪', url: 'https://qqovo.top/face/169.gif'},
+            {id: 171, name: '/茶', url: 'https://qqovo.top/face/171.gif'},
+            {id: 172, name: '/眨眼睛', url: 'https://qqovo.top/face/172.gif'},
+            {id: 173, name: '/泪奔', url: 'https://qqovo.top/face/173.gif'},
+            {id: 174, name: '/无奈', url: 'https://qqovo.top/face/174.gif'},
+            {id: 175, name: '/卖萌', url: 'https://qqovo.top/face/175.gif'},
+            {id: 176, name: '/小纠结', url: 'https://qqovo.top/face/176.gif'},
+            {id: 177, name: '/喷血', url: 'https://qqovo.top/face/177.gif'},
+            {id: 178, name: '/斜眼笑', url: 'https://qqovo.top/face/178.gif'},
+            {id: 179, name: '/doge', url: 'https://qqovo.top/face/179.gif'},
+            {id: 181, name: '/戳一戳', url: 'https://qqovo.top/face/181.gif'},
+            {id: 182, name: '/笑哭', url: 'https://qqovo.top/face/182.gif'},
+            {id: 183, name: '/我最美', url: 'https://qqovo.top/face/183.gif'},
+            {id: 185, name: '/羊驼', url: 'https://qqovo.top/face/185.gif'},
+            {id: 187, name: '/幽灵', url: 'https://qqovo.top/face/187.gif'},
+            {id: 201, name: '/点赞', url: 'https://qqovo.top/face/201.gif'},
+            {id: 212, name: '/托腮', url: 'https://qqovo.top/face/212.gif'},
+            {id: 262, name: '/脑阔疼', url: 'https://qqovo.top/face/262.gif'},
+            {id: 263, name: '/沧桑', url: 'https://qqovo.top/face/263.gif'},
+            {id: 264, name: '/捂脸', url: 'https://qqovo.top/face/264.gif'},
+            {id: 265, name: '/辣眼睛', url: 'https://qqovo.top/face/265.gif'},
+            {id: 266, name: '/哦哟', url: 'https://qqovo.top/face/266.gif'},
+            {id: 267, name: '/头秃', url: 'https://qqovo.top/face/267.gif'},
+            {id: 268, name: '/问号脸', url: 'https://qqovo.top/face/268.gif'},
+            {id: 269, name: '/暗中观察', url: 'https://qqovo.top/face/269.gif'},
+            {id: 270, name: '/emm', url: 'https://qqovo.top/face/270.gif'},
+            {id: 271, name: '/吃瓜', url: 'https://qqovo.top/face/271.gif'},
+            {id: 272, name: '/呵呵哒', url: 'https://qqovo.top/face/272.gif'},
+            {id: 273, name: '/我酸了', url: 'https://qqovo.top/face/273.gif'},
+            {id: 277, name: '/汪汪', url: 'https://qqovo.top/face/277.gif'},
+            {id: 281, name: '/无眼笑', url: 'https://qqovo.top/face/281.gif'},
+            {id: 282, name: '/敬礼', url: 'https://qqovo.top/face/282.gif'},
+            {id: 283, name: '/狂笑', url: 'https://qqovo.top/face/283.gif'},
+            {id: 284, name: '/面无表情', url: 'https://qqovo.top/face/284.gif'},
+            {id: 285, name: '/摸鱼', url: 'https://qqovo.top/face/285.gif'},
+            {id: 286, name: '/魔鬼笑', url: 'https://qqovo.top/face/286.gif'},
+            {id: 287, name: '/哦', url: 'https://qqovo.top/face/287.gif'},
+            {id: 289, name: '/睁眼', url: 'https://qqovo.top/face/289.gif'},
+            {id: 293, name: '/摸锦鲤', url: 'https://qqovo.top/face/293.gif'},
+            {id: 294, name: '/期待', url: 'https://qqovo.top/face/294.gif'},
+            {id: 295, name: '/拿到红包', url: 'https://qqovo.top/face/295.gif'},
+            {id: 297, name: '/拜谢', url: 'https://qqovo.top/face/297.gif'},
+            {id: 298, name: '/元宝', url: 'https://qqovo.top/face/298.gif'},
+            {id: 299, name: '/牛啊', url: 'https://qqovo.top/face/299.gif'},
+            {id: 300, name: '/胖三斤', url: 'https://qqovo.top/face/300.gif'},
+            {id: 302, name: '/左拜年', url: 'https://qqovo.top/face/302.gif'},
+            {id: 303, name: '/右拜年', url: 'https://qqovo.top/face/303.gif'},
+            {id: 305, name: '/右亲亲', url: 'https://qqovo.top/face/305.gif'},
+            {id: 306, name: '/牛气冲天', url: 'https://qqovo.top/face/306.gif'},
+            {id: 307, name: '/喵喵', url: 'https://qqovo.top/face/307.gif'},
+            {id: 311, name: '/打call', url: 'https://qqovo.top/face/311.gif'},
+            {id: 312, name: '/变形', url: 'https://qqovo.top/face/312.gif'},
+            {id: 314, name: '/仔细分析', url: 'https://qqovo.top/face/314.gif'},
+            {id: 317, name: '/菜汪', url: 'https://qqovo.top/face/317.gif'},
+            {id: 318, name: '/崇拜', url: 'https://qqovo.top/face/318.gif'},
+            {id: 319, name: '/比心', url: 'https://qqovo.top/face/319.gif'},
+            {id: 320, name: '/庆祝', url: 'https://qqovo.top/face/320.gif'},
+            {id: 323, name: '/嫌弃', url: 'https://qqovo.top/face/323.gif'},
+            {id: 324, name: '/吃糖', url: 'https://qqovo.top/face/324.gif'},
+            {id: 325, name: '/惊吓', url: 'https://qqovo.top/face/325.gif'},
+            {id: 326, name: '/生气', url: 'https://qqovo.top/face/326.gif'},
+            {id: 332, name: '/举牌牌', url: 'https://qqovo.top/face/332.gif'},
+            {id: 333, name: '/烟花', url: 'https://qqovo.top/face/333.gif'},
+            {id: 334, name: '/虎虎生威', url: 'https://qqovo.top/face/334.gif'},
+            {id: 336, name: '/豹富', url: 'https://qqovo.top/face/336.gif'},
+            {id: 337, name: '/花朵脸', url: 'https://qqovo.top/face/337.gif'},
+            {id: 338, name: '/我想开了', url: 'https://qqovo.top/face/338.gif'},
+            {id: 339, name: '/舔屏', url: 'https://qqovo.top/face/339.gif'},
+            {id: 341, name: '/打招呼', url: 'https://qqovo.top/face/341.gif'},
+            {id: 342, name: '/酸Q', url: 'https://qqovo.top/face/342.gif'},
+            {id: 343, name: '/我方了', url: 'https://qqovo.top/face/343.gif'},
+            {id: 344, name: '/大怨种', url: 'https://qqovo.top/face/344.gif'},
+            {id: 345, name: '/红包多多', url: 'https://qqovo.top/face/345.gif'},
+            {id: 346, name: '/你真棒棒', url: 'https://qqovo.top/face/346.gif'},
+            {id: 347, name: '/大展宏兔', url: 'https://qqovo.top/face/347.gif'},
+            {id: 349, name: '/坚强', url: 'https://qqovo.top/face/349.gif'},
+            {id: 350, name: '/贴贴', url: 'https://qqovo.top/face/350.gif'},
+            {id: 351, name: '/敲敲', url: 'https://qqovo.top/face/351.gif'},
+            {id: 352, name: '/咦', url: 'https://qqovo.top/face/352.gif'},
+            {id: 353, name: '/拜托', url: 'https://qqovo.top/face/353.gif'},
+            {id: 354, name: '/尊嘟假嘟', url: 'https://qqovo.top/face/354.gif'},
+            {id: 355, name: '/耶', url: 'https://qqovo.top/face/355.gif'},
+            {id: 356, name: '/666', url: 'https://qqovo.top/face/356.gif'},
+            {id: 357, name: '/裂开', url: 'https://qqovo.top/face/357.gif'},
+            {id: 392, name: '/龙年快乐', url: 'https://qqovo.top/face/392.gif'},
+            {id: 395, name: '/略略略', url: 'https://qqovo.top/face/395.gif'},
+            {id: 415, name: '/划龙舟', url: 'https://qqovo.top/face/415.gif'}
+        ];
+        
+        // 初始化表情面板
+        function initEmojiPanel() {
+            const emojiGrid = document.getElementById('emojiGrid');
+            qqEmojis.forEach(emoji => {
+                const btn = document.createElement('button');
+                btn.className = 'emoji-item';
+                btn.setAttribute('data-name', emoji.name);
+                btn.innerHTML = `<img src="${emoji.url}" alt="${emoji.name}" loading="lazy">`;
+                btn.addEventListener('click', () => insertEmoji(emoji));
+                emojiGrid.appendChild(btn);
+            });
+        }
+        
+        // 插入表情到输入框
+        function insertEmoji(emoji) {
+            const input = document.getElementById('chatInput');
+            input.value += emoji.name;
+            input.focus();
+        }
+        
+        // 表情面板切换
+        document.getElementById('emojiBtn').addEventListener('click', () => {
+            document.getElementById('emojiPanel').classList.toggle('active');
+        });
+        
+        document.getElementById('emojiClose').addEventListener('click', () => {
+            document.getElementById('emojiPanel').classList.remove('active');
+        });
+        
+        // 聊天面板折叠
+        let isChatCollapsed = false;
+        document.getElementById('chatToggle').addEventListener('click', function() {
+            const chatSection = document.getElementById('chatSection');
+            isChatCollapsed = !isChatCollapsed;
+            chatSection.classList.toggle('collapsed', isChatCollapsed);
+            this.textContent = isChatCollapsed ? '+' : '−';
+        });
+        
+        // 发送消息
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            socket.emit('chat_message', {
+                room: room,
+                username: username,
+                message: message,
+                timestamp: new Date().toISOString()
+            });
+            
+            input.value = '';
+            document.getElementById('emojiPanel').classList.remove('active');
+        }
+        
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // 添加消息到聊天区
+        function addMessage(data, isSelf = false) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message';
+            
+            const time = new Date(data.timestamp).toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'});
+            
+            // 转换表情代码为图片
+            let messageHtml = data.message.replace(/\/(\S+)/g, (match, name) => {
+                const emoji = qqEmojis.find(e => e.name === '/' + name);
+                if (emoji) {
+                    return `<img src="${emoji.url}" alt="${emoji.name}" style="height:24px;width:auto;vertical-align:middle;">`;
+                }
+                return match;
+            });
+            
+            msgDiv.innerHTML = `
+                <div class="chat-message-header">
+                    <span class="chat-username">${isSelf ? '我' : data.username}</span>
+                    <span class="chat-time">${time}</span>
+                </div>
+                <div class="chat-bubble" style="${isSelf ? 'background: rgba(118, 75, 162, 0.3);' : ''}">${messageHtml}</div>
+            `;
+            
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        // 设置视频
         const videoSrc = '{{ video_url }}';
         if (Hls.isSupported()) {
             const hls = new Hls();
@@ -61,49 +677,111 @@
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = videoSrc;
         }
-
+        
+        // Socket 事件
         socket.on('connect', () => {
+            console.log('Connected to server');
             socket.emit('join', {room: room});
         });
-
+        
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+        });
+        
         socket.on('user_joined', (data) => {
             userCount.textContent = `在线用户: ${data.count}`;
+            isHost = data.is_host;
+            
+            if (isHost) {
+                hostBadge.classList.remove('hidden');
+                addMessage({
+                    username: '系统',
+                    message: '你是房主，你的播放进度会同步给其他用户',
+                    timestamp: new Date().toISOString()
+                });
+            } else {
+                hostBadge.classList.add('hidden');
+                // 非房主，同步到房主状态
+                if (data.host_state) {
+                    video.currentTime = data.host_state.time;
+                    if (data.host_state.playing) {
+                        video.play();
+                    } else {
+                        video.pause();
+                    }
+                }
+                addMessage({
+                    username: '系统',
+                    message: '已加入房间，正在同步房主进度...',
+                    timestamp: new Date().toISOString()
+                });
+            }
         });
-
+        
+        socket.on('user_joined_broadcast', (data) => {
+            userCount.textContent = `在线用户: ${data.count}`;
+        });
+        
         socket.on('user_left', (data) => {
             userCount.textContent = `在线用户: ${data.count}`;
         });
-
+        
+        socket.on('new_host', (data) => {
+            isHost = data.is_host;
+            if (isHost) {
+                hostBadge.classList.remove('hidden');
+                addMessage({
+                    username: '系统',
+                    message: '原房主已离开，你已成为新房主',
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+        
+        // 只有非房主才接收同步指令
         socket.on('sync', (data) => {
-            const timeDiff = Math.abs(video.currentTime - data.time);
-            if (timeDiff > SYNC_THRESHOLD) {
-                video.currentTime = data.time;
+            if (!isHost) {
+                const timeDiff = Math.abs(video.currentTime - data.time);
+                if (timeDiff > SYNC_THRESHOLD) {
+                    video.currentTime = data.time;
+                }
+                if (data.playing && video.paused) {
+                    video.play();
+                } else if (!data.playing && !video.paused) {
+                    video.pause();
+                }
             }
-            if (data.playing && video.paused) {
-                video.play();
-            } else if (!data.playing && !video.paused) {
-                video.pause();
-            }
         });
-
-        video.addEventListener('play', () => {
-            socket.emit('sync', {room: room, time: video.currentTime, playing: true});
+        
+        // 接收聊天消息
+        socket.on('chat_message', (data) => {
+            addMessage(data, data.username === username);
         });
-
-        video.addEventListener('pause', () => {
-            socket.emit('sync', {room: room, time: video.currentTime, playing: false});
-        });
-
-        video.addEventListener('seeked', () => {
-            socket.emit('sync', {room: room, time: video.currentTime, playing: !video.paused});
-        });
-
-        // 每5秒同步一次进度
-        setInterval(() => {
-            if (!video.paused) {
+        
+        // 房主发送同步事件
+        if (isHost) {
+            video.addEventListener('play', () => {
                 socket.emit('sync', {room: room, time: video.currentTime, playing: true});
-            }
-        }, 5000);
+            });
+            
+            video.addEventListener('pause', () => {
+                socket.emit('sync', {room: room, time: video.currentTime, playing: false});
+            });
+            
+            video.addEventListener('seeked', () => {
+                socket.emit('sync', {room: room, time: video.currentTime, playing: !video.paused});
+            });
+            
+            // 每3秒同步一次进度
+            setInterval(() => {
+                if (!video.paused) {
+                    socket.emit('sync', {room: room, time: video.currentTime, playing: true});
+                }
+            }, 3000);
+        }
+        
+        // 初始化
+        initEmojiPanel();
     </script>
 </body>
 </html>
