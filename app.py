@@ -1,15 +1,19 @@
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
+import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
+# 从环境变量读取视频URL，如果没有设置则使用默认值
+VIDEO_URL = os.environ.get('VIDEO_URL', 'https://svip.high21-playback.com/20240721/37526_a7bdcdca/index.m3u8')
+
 rooms = {}
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', video_url=VIDEO_URL)
 
 @socketio.on('join')
 def on_join(data):
