@@ -52,7 +52,8 @@
         const SYNC_THRESHOLD = 2; // 设置2秒的同步阈值
 
         // 设置HLS.js来播放m3u8视频
-        const videoSrc = 'https://svip.high21-playback.com/20240721/37526_a7bdcdca/index.m3u8'; // 替换为你的m3u8视频URL
+        // 视频URL从后端通过模板变量传入
+        const videoSrc = '{{ video_url }}';
         if (Hls.isSupported()) {
             const hls = new Hls();
             hls.loadSource(videoSrc);
