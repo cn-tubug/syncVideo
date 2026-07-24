@@ -261,12 +261,18 @@
     </div>
 
     <script>
-        // 配置 Socket.IO 连接
-        const socket = io({
+        // ============================================
+        // 配置 Socket.IO 连接 - 国内服务器地址
+        // 修改这里为你的国内服务器地址
+        // ============================================
+        const SOCKET_SERVER_URL = 'http://your-server-ip:5000';  // 替换为你的国内服务器IP
+
+        const socket = io(SOCKET_SERVER_URL, {
             transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionAttempts: 5,
-            reconnectionDelay: 1000
+            reconnectionDelay: 1000,
+            timeout: 20000
         });
         
         const video = document.getElementById('video');
